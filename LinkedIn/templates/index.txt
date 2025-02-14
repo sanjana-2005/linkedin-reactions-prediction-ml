@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVR Model Prediction</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #7a4f7f, #9b66a3);
+            margin: 0;
+            padding: 0;
+            color: #fff;
+        }
+
+        header {
+            background: #6a3e8d;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 32px;
+            border-bottom: 4px solid #8c4d9b;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #6a3e8d;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            color: #6a3e8d;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #6a3e8d;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #9b66a3;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #7a4f7f;
+            transform: scale(1.05);
+        }
+
+        .result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #6a3e8d;
+        }
+
+        .error {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #e74c3c;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-group input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .input-group input:focus {
+            border-color: #9b66a3;
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+            border-radius: 12px 12px 0 0;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>SVR Model Reaction Prediction</h1>
+</header>
+
+<div class="container">
+    <h2>Enter Data for Prediction</h2>
+    <form id="predictionForm">
+        <div class="input-group">
+            <label for="followers">Followers:</label>
+            <input type="text" name="followers" id="followers" required>
+
+            <label for="connections">Connections:</label>
+            <input type="text" name="connections" id="connections" required>
+
+            <label for="num_hashtags">Number of Hashtags:</label>
+            <input type="text" name="num_hashtags" id="num_hashtags" required>
+
+            <label for="comments">Comments:</label>
+            <input type="text" name="comments" id="comments" required>
+
+            <label for="headline">Headline:</label>
+            <input type="text" name="headline" id="headline" required>
+
+            <label for="location">Location:</label>
+            <input type="text" name="location" id="location" required>
+
+            <label for="media_type">Media Type:</label>
+            <input type="text" name="media_type" id="media_type" required>
+
+            <button type="submit">Predict</button>
+        </div>
+    </form>
+
+    <div id="result" class="result"></div>
+    <div id="error" class="error"></div>
+
+    <a href="/dashboard"><button>Go to Dashboard</button></a>
+</div>
+
+<script>
+    document.getElementById('predictionForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const data = {};
+
+        // Collect input data
+        formData.forEach((value, key) => {
+            if (['followers', 'connections', 'num_hashtags', 'comments'].includes(key)) {
+                value = value.replace(/,/g, ''); // Remove commas if any
+            }
+            data[key] = parseFloat(value) || value; // Ensure numeric conversion where needed
+        });
+
+        // Create new features that were used during training (if necessary)
+        data['comments_hashtags_interaction'] = data['comments'] * data['num_hashtags'];
+        data['followers_connections_interaction'] = data['followers'] * data['connections'];
+        data['followers_sq'] = Math.pow(data['followers'], 2);
+
+        // Ensure any other necessary derived features are calculated here (e.g., squared features or interactions)
+        // Example:
+        // data['connections_sq'] = Math.pow(data['connections'], 2);
+
+        fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.prediction !== undefined) {
+                document.getElementById('result').innerText = `Predicted Reaction: ${result.prediction}`;
+                document.getElementById('error').style.display = 'none'; // Hide error
+            } else if (result.error) {
+                document.getElementById('error').innerText = `Error: ${result.error}`;
+                document.getElementById('result').style.display = 'none'; // Hide result
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('result').style.display = 'none'; // Hide result
+            document.getElementById('error').innerText = 'An error occurred. Please try again.';
+        });
+    });
+</script>
+
+</body>
+</html>
+x
